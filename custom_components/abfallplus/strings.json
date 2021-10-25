@@ -1,0 +1,37 @@
+{
+  "title": "Abfallplus App",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Abfallplus App",
+        "data": {
+          "app_id": "Abfallplus App Name"
+        }
+      },
+      "community": {
+        "title": "Municipality",
+        "data": {
+          "community_id": "Our municipality"
+        }
+      },
+      "street": {
+        "title": "Street",
+        "data": {
+          "street_id": "Our street"
+        }
+      },
+      "hnr": {
+        "title": "Street number",
+        "data": {
+          "hnr_id": "Our street number"
+        }
+      },
+      "abfallarten": {
+        "title": "Waste type selection",
+        "data": {
+          "abfallarten_id": "Waste type to observe"
+        }
+      }
+    }
+  }
+}

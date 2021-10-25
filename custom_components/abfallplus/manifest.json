@@ -1,0 +1,14 @@
+{
+  "domain": "app_abfallplus_de",
+  "name": "Abfallplus",
+  "config_flow": true,
+  "version": "0.0.2",
+  "documentation": "https://github.com/dannerph/homeassistant-abfallplus",
+  "requirements": ["beautifulsoup4>=4.1.0", "aiohttp>=3.6.2", "datetime>=4.3"],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "iot_class": "cloud_polling",
+  "codeowners": ["@dannerph"]
+}

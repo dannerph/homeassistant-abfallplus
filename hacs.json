@@ -1,0 +1,8 @@
+{
+    "name": "Abbfall Plus Waste Collection",
+    "render_readme": true,
+    "domains": [
+      "sensor"
+    ],
+    "iot_class": "cloud_poll"
+  }

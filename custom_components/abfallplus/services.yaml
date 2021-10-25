@@ -1,0 +1,5 @@
+# Describes the format for available services for the Solcast integration
+
+update_sensors:
+  description: >
+    Forces to fetch new data from Abfallplus.

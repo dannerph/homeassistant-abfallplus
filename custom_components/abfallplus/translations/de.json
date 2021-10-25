@@ -1,0 +1,37 @@
+{
+  "title": "Abfallplus App",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Abfallplus App",
+        "data": {
+          "app_id": "Name der Abfallplus App"
+        }
+      },
+      "community": {
+        "title": "Kommune",
+        "data": {
+          "community_id": "Deine Kommune"
+        }
+      },
+      "street": {
+        "title": "Straße",
+        "data": {
+          "street_id": "Deine Straße"
+        }
+      },
+      "hnr": {
+        "title": "Hausnummer",
+        "data": {
+          "hnr_id": "Deine Hausnummer"
+        }
+      },
+      "abfallarten": {
+        "title": "Abfallarten",
+        "data": {
+          "abfallarten_id": "Abfallarten"
+        }
+      }
+    }
+  }
+}
