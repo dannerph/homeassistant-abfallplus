@@ -1,15 +1,11 @@
-"""GitHub sensor platform."""
-import logging
-from typing import Any, Dict, Optional
-
+"""Abfallplus sensor platform."""
 from homeassistant import config_entries, core
-from homeassistant.helpers.entity import Entity
-
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorEntityDescription,
+)
 
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
-
 
 async def async_setup_entry(
     hass: core.HomeAssistant,
@@ -17,38 +13,34 @@ async def async_setup_entry(
     async_add_entities,
 ):
     """Setup sensors from a config entry created in the integrations UI."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    api_handler = hass.data[DOMAIN][config_entry.entry_id]
     sensors = []
-    for waster_type in config.api.config["abfallarten"]:
-        sensors.append(WasteSensor(waster_type["name"], config))
+    for waster_type in api_handler.api.config["abfallarten"]:
+        sensors.append(
+            WasteSensor(api_handler,
+                SensorEntityDescription(
+                    key=waster_type["name"],
+                    name=waster_type["name"]
+                )
+            )
+        )
     async_add_entities(sensors, update_before_add=True)
 
 
-class WasteSensor(Entity):
+class WasteSensor(SensorEntity):
     """Representation of a Abfallsplus sensor."""
 
-    def __init__(self, name, api):
+    _attr_should_poll = False
+
+    def __init__(self, api_handler, description):
         super().__init__()
-        self.api = api
-        self.attrs = {}
-        self._name = name
-        self._state = None
-        self._available = True
+        self.api_handler = api_handler
+        self.entity_description = description
 
-    @property
-    def name(self) -> str:
-        """Return the name of the entity."""
-        return self._name
+        self._attr_name = description.name
+        self._attr_unique_id = self.api_handler.api.config["community"]["name"] + "_" + self.name
 
-    @property
-    def unique_id(self) -> str:
-        """Return the unique ID of the sensor."""
-        return self.api.api.config["community"]["name"] + "_" + self.name
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self._available
+        self._attributes: dict[str, str] = {}
 
     @property
     def icon(self):
@@ -56,26 +48,16 @@ class WasteSensor(Entity):
         return "mdi:trash-can"
 
     @property
-    def state(self) -> Optional[str]:
-        return self._state
-
-    @property
-    def device_state_attributes(self) -> Dict[str, Any]:
-        return self.attrs
-
-    @property
-    def should_poll(self) -> bool:
-        """Return True if entity has to be polled for state.
-        False if entity pushes its state to HA.
-        """
-        return False
+    def extra_state_attributes(self):
+        """Return the state attributes of the binary sensor."""
+        return self._attributes
 
     async def async_update(self):
         """Get latest cached states from the device."""
 
-        if self.api.data is not None and len(self.api.data[self._name]) >= 2:
-            self._state = str(self.api.data[self._name][0])
-            self.attrs = {"übernächstes Mal": str(self.api.data[self._name][1])}
+        if self.api_handler.data is not None and len(self.api_handler.data[self._name]) >= 2:
+            self._state = str(self.api_handler.data[self._name][0])
+            self._attributes = {"übernächstes Mal": str(self.api_handler.data[self._name][1])}
 
     def update_callback(self):
         """Schedule a state update."""
@@ -83,4 +65,4 @@ class WasteSensor(Entity):
 
     async def async_added_to_hass(self):
         """Add update callback after being added to hass."""
-        self.api.add_update_listener(self.update_callback)
+        self.api_handler.add_update_listener(self.update_callback)
