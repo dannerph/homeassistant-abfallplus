@@ -1,8 +1,6 @@
 """The Abfallplus integration."""
 import logging
-import asyncio
 import datetime
-from dateutil.parser import parse
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

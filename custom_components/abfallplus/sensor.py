@@ -7,6 +7,7 @@ from homeassistant.components.sensor import (
 
 from .const import DOMAIN
 
+
 async def async_setup_entry(
     hass: core.HomeAssistant,
     config_entry: config_entries.ConfigEntry,
@@ -17,11 +18,11 @@ async def async_setup_entry(
     sensors = []
     for waster_type in api_handler.api.config["abfallarten"]:
         sensors.append(
-            WasteSensor(api_handler,
+            WasteSensor(
+                api_handler,
                 SensorEntityDescription(
-                    key=waster_type["name"],
-                    name=waster_type["name"]
-                )
+                    key=waster_type["name"], name=waster_type["name"]
+                ),
             )
         )
     async_add_entities(sensors, update_before_add=True)
@@ -38,7 +39,9 @@ class WasteSensor(SensorEntity):
         self.entity_description = description
 
         self._attr_name = description.name
-        self._attr_unique_id = self.api_handler.api.config["community"]["name"] + "_" + self.name
+        self._attr_unique_id = (
+            self.api_handler.api.config["community"]["name"] + "_" + description.name
+        )
 
         self._attributes: dict[str, str] = {}
 
@@ -55,9 +58,14 @@ class WasteSensor(SensorEntity):
     async def async_update(self):
         """Get latest cached states from the device."""
 
-        if self.api_handler.data is not None and len(self.api_handler.data[self._name]) >= 2:
-            self._state = str(self.api_handler.data[self._name][0])
-            self._attributes = {"übernächstes Mal": str(self.api_handler.data[self._name][1])}
+        if (
+            self.api_handler.data is not None
+            and len(self.api_handler.data[self._attr_name]) >= 2
+        ):
+            self._attr_native_value = str(self.api_handler.data[self._attr_name][0])
+            self._attributes = {
+                "übernächstes Mal": str(self.api_handler.data[self._attr_name][1])
+            }
 
     def update_callback(self):
         """Schedule a state update."""

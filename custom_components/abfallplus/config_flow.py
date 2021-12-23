@@ -20,6 +20,7 @@ class AbfallPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None):
         """Invoked when a user initiates a flow via the user interface."""
+
         if user_input is not None:
             for app in self.api.get_apps():
                 if user_input["app_id"] == app["name"]:
