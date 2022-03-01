@@ -1,5 +1,6 @@
 """Abfallplus sensor platform."""
 from homeassistant import config_entries, core
+import babel.dates
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
@@ -62,7 +63,11 @@ class WasteSensor(SensorEntity):
             self.api_handler.data is not None
             and len(self.api_handler.data[self._attr_name]) >= 2
         ):
-            self._attr_native_value = str(self.api_handler.data[self._attr_name][0])
+            date = self.api_handler.data[self._attr_name][0]
+            friendly_value = babel.dates.format_datetime(date,
+                                     "EEE d. MMM",
+                                     locale="de_DE")
+            self._attr_native_value = friendly_value
             self._attributes = {
                 "übernächstes Mal": str(self.api_handler.data[self._attr_name][1])
             }

@@ -4,7 +4,12 @@
   "config_flow": true,
   "version": "0.1.2",
   "documentation": "https://github.com/dannerph/homeassistant-abfallplus",
-  "requirements": ["beautifulsoup4>=4.1.0", "aiohttp>=3.6.2", "datetime>=4.3"],
+  "requirements": [
+    "beautifulsoup4>=4.1.0",
+    "aiohttp>=3.6.2",
+    "datetime>=4.3",
+    "babel>=2.9.1"
+  ],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
