@@ -2,7 +2,7 @@
   "domain": "abfallplus",
   "name": "Abfallplus",
   "config_flow": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "documentation": "https://github.com/dannerph/homeassistant-abfallplus",
   "requirements": ["beautifulsoup4>=4.1.0", "aiohttp>=3.6.2", "babel>=2.9.1"],
   "ssdp": [],
