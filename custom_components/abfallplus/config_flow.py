@@ -1,12 +1,13 @@
 """Config flow for Abfallplus integration."""
-import voluptuous as vol
 
-from typing import Any, Dict, Optional
-from .abfallplus_app_lib import AbfallplusApp
+from typing import Any
+
+import voluptuous as vol
 
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
 
+from .abfallplus_app_lib import AbfallplusApp
 from .const import DOMAIN  # pylint:disable=unused-import
 
 
@@ -18,8 +19,8 @@ class AbfallPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     api = AbfallplusApp()
 
-    async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None):
-        """Invoked when a user initiates a flow via the user interface."""
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
+        """Invoke when a user initiates a flow via the user interface."""
 
         if user_input is not None:
             for app in self.api.get_apps():
@@ -34,7 +35,7 @@ class AbfallPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="user", data_schema=data_schema)
 
-    async def async_step_community(self, user_input: Optional[Dict[str, Any]] = None):
+    async def async_step_community(self, user_input: dict[str, Any] | None = None):
         """Second step in config flow to add a repo to watch."""
         communities = await self.api.get_communities()
         if user_input is not None:
@@ -50,7 +51,7 @@ class AbfallPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="community", data_schema=data_schema)
 
-    async def async_step_street(self, user_input: Optional[Dict[str, Any]] = None):
+    async def async_step_street(self, user_input: dict[str, Any] | None = None):
         """Second step in config flow to add a repo to watch."""
         streets = await self.api.get_streets()
         if user_input is not None:
@@ -68,7 +69,7 @@ class AbfallPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="street", data_schema=data_schema, errors={}
         )
 
-    async def async_step_hnr(self, user_input: Optional[Dict[str, Any]] = None):
+    async def async_step_hnr(self, user_input: dict[str, Any] | None = None):
         """Second step in config flow to add a repo to watch."""
         hnr = await self.api.get_hnr()
         if user_input is not None:
@@ -84,7 +85,7 @@ class AbfallPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="hnr", data_schema=data_schema)
 
-    async def async_step_abfallarten(self, user_input: Optional[Dict[str, Any]] = None):
+    async def async_step_abfallarten(self, user_input: dict[str, Any] | None = None):
         """Second step in config flow to add a repo to watch."""
         abfallarten = await self.api.get_abfallarten()
         if user_input is not None:

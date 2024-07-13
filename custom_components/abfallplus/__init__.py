@@ -1,96 +1,66 @@
 """The Abfallplus integration."""
+
+from datetime import timedelta
 import logging
-import datetime
 
-from homeassistant.config_entries import ConfigEntry
+from babel import dates
+
+from homeassistant.config_entries import ConfigEntry, ConfigEntryError
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_track_utc_time_change
-
-from .const import DOMAIN
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .abfallplus_app_lib import AbfallplusApp
+from .const import DOMAIN, ENTRY_COORDINATOR
 
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up Abfallplus from a config entry."""
 
-    # Create and store handler
-    abfallplus = AbfllaplusAppHandler(hass, AbfallplusApp(entry.data))
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = abfallplus
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up SMA Sunny Beam from a config entry."""
 
-    # Register force update service
-    hass.services.async_register(DOMAIN, "update_sensors", abfallplus.update_sensors)
+    abfallplus = AbfallplusApp(entry.data)
+    try:
+        await abfallplus.get_pickup_times()
+    except BaseException as err:
+        raise ConfigEntryError("Could not connect to Abfallplus") from err
 
-    # Setup sensors
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    async def async_update_data():
+        """Fetch data from API endpoint."""
+        try:
+            data = await abfallplus.get_pickup_times()
+        except BaseException as error:
+            raise UpdateFailed("Could not fetch data from Sunny Beam") from error
+        _LOGGER.debug("Data fetched from Sunny Beam: %s", data)
+
+        # Format dates
+        data_formatted = {}
+        for key, value in data.items():
+            dates_formaated = []
+            for date_unformated in value:
+                formated = await hass.async_add_executor_job(
+                    lambda d=date_unformated: dates.format_datetime(
+                        d, "EEE d. MMM", locale="de_DE"
+                    )
+                )
+                dates_formaated.append(formated)
+            data_formatted[key] = dates_formaated
+        return data_formatted
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=ENTRY_COORDINATOR,
+        update_method=async_update_data,
+        update_interval=timedelta(hours=1),
     )
 
-    # Start periodic updates
-    abfallplus.start_periodic_request()
+    await coordinator.async_refresh()
 
-    # Initial request
-    await abfallplus.update_sensors()
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {ENTRY_COORDINATOR: coordinator}
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Unload a config entry."""
-
-    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
-
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
-
-
-class AbfllaplusAppHandler:
-    def __init__(self, hass, api):
-        """Initialize charging station connection."""
-
-        self._update_listeners = []
-        self._hass = hass
-        self.api = api
-        self.device_name = "abfallplus"  # correct device name will be set in setup()
-        self.device_id = "abfallplus_"  # correct device id will be set in setup()
-        self.data = None
-
-    def start_periodic_request(self):
-        """Start periodic data polling."""
-
-        now = datetime.datetime.now()
-        async_track_utc_time_change(
-            self._hass,
-            self.update_sensors,
-            hour=0,
-            minute=now.minute,
-            second=now.second,
-            local=True,
-        )
-
-    async def update_sensors(self, *args):
-        """Fetch new data and update listeners."""
-        _LOGGER.debug("Update waste collection sensors")
-
-        self.data = await self.api.get_pickup_times()
-
-        # Inform entities about updated values
-        for listener in self._update_listeners:
-            listener()
-
-        _LOGGER.debug("Notifying %d listeners", len(self._update_listeners))
-
-    def add_update_listener(self, listener):
-        """Add a listener for update notifications."""
-        self._update_listeners.append(listener)
-
-        # initial data is already loaded, thus update the component
-        listener()
-
-    async def async_fetch(self, param=None):
-        """Set failsafe mode in async way."""
-        await self.update_sensors()

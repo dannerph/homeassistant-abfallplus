@@ -1,29 +1,30 @@
 # %%
-import datetime
-import plistlib as plist
-
-from dateutil.parser import parse
-import aiohttp
 import asyncio
-import uuid
-from bs4 import BeautifulSoup
+import datetime
 import logging
+import plistlib as plist
+import uuid
+
+import aiohttp
+from bs4 import BeautifulSoup
+from dateutil.parser import parse
 
 _LOGGER = logging.getLogger(__name__)
 
+HEADERS = {
+    "user-agent": "Android",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Connection": "Keep-Alive",
+}
+BASE_URL = "https://app.abfallplus.de/"
+
 
 class AbfallplusApp:
-
-    HEADERS = {
-        "user-agent": "Android",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Connection": "Keep-Alive",
-    }
-    BASE_URL = "https://app.abfallplus.de/"
+    """Abfallplus API class."""
 
     config = {}
 
-    def __init__(self, config=None):
+    def __init__(self, config=None) -> None:
         """Instantiate a new abfallplus.Api object."""
 
         if config is not None:
@@ -37,7 +38,7 @@ class AbfallplusApp:
             self.config["hnr"] = None
             self.config["abfallarten"] = []
 
-    def __createPostData(self, additional_post_data=None):
+    def _createPostData(self, additional_post_data=None):
         c = self.config
         post_data = [
             ("id_bezirk", ""),
@@ -63,10 +64,11 @@ class AbfallplusApp:
         return post_data
 
     def get_apps(self):
-        """Return all supported app IDs covered by the waste management company
+        """Return all supported app IDs covered by the waste management company.
 
         Returns:
             list: A sequence of app ID instances.
+
         """
         apps_mapping = []
         apps_mapping.append(
@@ -81,40 +83,59 @@ class AbfallplusApp:
 
         return apps_mapping
 
-    def set_app(self, app):
+    def set_app(self, app) -> None:
+        """Set the app to be used for the API."""
+
         self.config["app"] = app
         _LOGGER.debug("Set app to be %s", app)
 
     async def get_communities(self):
-        return await self.__request(url="assistent/kommune/")
+        """Return all communities covered by the waste management company."""
+
+        return await self._request(url="assistent/kommune/")
 
     def set_community(self, community):
+        """Set the community to be used for the API."""
+
         self.config["community"] = community
         _LOGGER.debug("Set community to be %s", community)
 
     async def get_streets(self):
-        return await self.__request(url="assistent/strasse/")
+        """Return all streets covered by the waste management company."""
 
-    def set_street(self, street):
+        return await self._request(url="assistent/strasse/")
+
+    def set_street(self, street) -> None:
+        """Set the street to be used for the API."""
+
         self.config["street"] = street
         _LOGGER.debug("Set street to be %s", street)
 
     async def get_hnr(self):
-        return await self.__request(url="assistent/hnr/")
+        """Return all house numbers covered by the waste management company."""
 
-    def set_hnr(self, hnr):
+        return await self._request(url="assistent/hnr/")
+
+    def set_hnr(self, hnr) -> None:
+        """Set the house number to be used for the API."""
+
         self.config["hnr"] = hnr
         _LOGGER.debug("Set hnr to be %s", hnr)
 
     async def get_abfallarten(self):
-        return await self.__request(url="assistent/abfallarten/")
+        """Return all waste types covered by the waste management company."""
 
-    def add_abfallart(self, abfallart):
+        return await self._request(url="assistent/abfallarten/")
+
+    def add_abfallart(self, abfallart) -> None:
+        """Add a waste type to be used for the API."""
+
         self.config["abfallarten"].append(abfallart)
         _LOGGER.debug("Appended abfallart %s", abfallart)
 
-    async def finalize_assistant(self):
-
+    async def finalize_assistant(self) -> dict:
+        """Finalize the assistant and return the configuration."""
+        await asyncio.sleep(3)
         post = [
             ("f_uhrzeit_tag", "86400|0"),
             ("f_uhrzeit_stunden", "57600"),
@@ -124,10 +145,11 @@ class AbfallplusApp:
             ("f_ueberspringen", "0"),
             ("f_datenschutz", datetime.datetime.now().strftime("%Y%m%d%H%M%S")),
         ]
-        await self.__request(url="assistent/finish/", additional_post_data=post)
+        await self._request(url="assistent/finish/", additional_post_data=post)
         return self.config
 
-    async def get_pickup_times(self):
+    async def get_pickup_times(self) -> dict | None:
+        """Return the pickup times for the configured waste types."""
 
         post_data = {
             "client": self.config["client_id"],
@@ -136,25 +158,25 @@ class AbfallplusApp:
 
         async with aiohttp.ClientSession() as session:
             await session.post(
-                url=self.BASE_URL + "login",
+                url=BASE_URL + "login",
                 data=post_data,
                 cookies=self.config["cookie"],
-                headers=self.HEADERS,
+                headers=HEADERS,
             )
             await session.post(
-                url=self.BASE_URL + "version.xml?renew=1",
+                url=BASE_URL + "version.xml?renew=1",
                 data=post_data,
                 cookies=self.config["cookie"],
-                headers=self.HEADERS,
+                headers=HEADERS,
             )
             async with session.post(
-                url=self.BASE_URL + "struktur.xml.zip",
+                url=BASE_URL + "struktur.xml.zip",
                 data=post_data,
-                headers=self.HEADERS,
+                headers=HEADERS,
             ) as resp:
                 if resp.status != 200:
                     _LOGGER.warning("Error in fetching pickup times")
-                    return
+                    return None
 
                 # Parse pickup data
                 received_data = await resp.content.read()
@@ -173,7 +195,8 @@ class AbfallplusApp:
                     extracted_data[a["name"]] = dates
                 return extracted_data
 
-    async def __login(self):
+    async def _login(self) -> None:
+        """Login to the API."""
 
         if self.config["app"]["app_id"] is None:
             raise ValueError("Set app first")
@@ -191,50 +214,54 @@ class AbfallplusApp:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                url=self.BASE_URL + "config.xml",
+                url=BASE_URL + "config.xml",
                 data=post_data,
-                headers=self.HEADERS,
+                headers=HEADERS,
             ) as resp:
-                self.config["cookie"] = session.cookie_jar.filter_cookies(self.BASE_URL)
+                self.config["cookie"] = session.cookie_jar.filter_cookies(BASE_URL)
                 status = resp.status
 
             if status != 200:
                 _LOGGER.warning("Cookie fetching failed")
             else:
                 async with session.post(
-                    url=self.BASE_URL + "login/",
+                    url=BASE_URL + "login/",
                     data=post_data,
-                    headers=self.HEADERS,
+                    headers=HEADERS,
                 ) as resp:
                     if resp.status != 200:
                         _LOGGER.warning("Login failed")
                     _LOGGER.debug("Login sucessfull")
 
-    async def __request(self, url, additional_post_data=None):
+    async def _request(self, url, additional_post_data=None) -> list:
+        """Request data from the API."""
 
-        await self.__login()
+        await self._login()
 
-        _LOGGER.debug("Starting request to %s", self.BASE_URL + url)
+        _LOGGER.debug("Starting request to %s", BASE_URL + url)
 
         # Request data
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                url=self.BASE_URL + url,
-                data=self.__createPostData(additional_post_data),
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                url=BASE_URL + url,
+                data=self._createPostData(additional_post_data),
                 cookies=self.config["cookie"],
-                headers=self.HEADERS,
-            ) as resp:
-                received_data = await resp.content.read()
-                status = resp.status
+                headers=HEADERS,
+            ) as resp,
+        ):
+            received_data = await resp.text(encoding="utf-8")
+            status = resp.status
 
         if status != 200:
             _LOGGER.warning("Error in request: %s", status)
         else:
-            return self.__parseConfigEntries(received_data)
+            return self._parseConfigEntries(received_data)
 
-    def __parseConfigEntries(self, received_data):
+    def _parseConfigEntries(self, received_data) -> list:
+        """Parse the received data and return the config entries."""
 
-        if b"OK|Yeah" in received_data:
+        if "OK|Yeah" in received_data:
             _LOGGER.info("Sucessfully registered")
 
         extracted_data = []
@@ -249,44 +276,52 @@ class AbfallplusApp:
                     {"name": onclick_split[1], "data": onclick_split[0]}
                 )
             return extracted_data
-        else:
-            for li in html.find_all("li"):
-                name = li.contents[2].replace("\n", "").replace(" ", "")
-                input_id = li.input.attrs["id"][15:]
+        for li in html.find_all("li"):
+            name = li.contents[2].replace("\n", "").replace(" ", "")
+            input_id = li.input.attrs["id"][15:]
+            extracted_data.append({"name": name, "data": input_id})
+
+        # Abfallarten
+        if html.find("ion-list"):
+            for item in html.find_all("ion-item"):
+                name = item.find("ion-text").contents[0]
+                onclick = item.contents[1].attrs["onclick"]
+                input_id = onclick[4:].split("'")[0][15:]
                 extracted_data.append({"name": name, "data": input_id})
-            return extracted_data
+        return extracted_data
 
 
-async def main():
-    api = AbfallplusApp()
+# async def main():
+#     api = AbfallplusApp()
 
-    apps = api.get_apps()
-    api.set_app(apps[0])
+#     apps = api.get_apps()
+#     api.set_app(apps[0])
 
-    communities = await api.get_communities()
-    api.set_community(communities[0])
+#     communities = await api.get_communities()
+#     api.set_community(communities[85])
 
-    streets = await api.get_streets()
-    api.set_street(streets[0])
+#     streets = await api.get_streets()
+#     api.set_street(streets[117])
 
-    hnr = await api.get_hnr()
-    api.set_hnr(hnr[0])
+#     hnr = await api.get_hnr()
+#     api.set_hnr(hnr[11])
 
-    abfallart = await api.get_abfallarten()
-    api.add_abfallart(abfallart[0])
-    api.add_abfallart(abfallart[1])
+#     abfallart = await api.get_abfallarten()
+#     api.add_abfallart(abfallart[0])
+#     api.add_abfallart(abfallart[1])
 
-    config = await api.finalize_assistant()
-    print(config)
+#     config = await api.finalize_assistant()
 
-    # Reset API and use config
-    api = AbfallplusApp(config)
-    pickup_times = await api.get_pickup_times()
-    print(pickup_times)
+#     # Reset API and use config
+#     api = AbfallplusApp(config)
+#     pickup_times = await api.get_pickup_times()
+#     print(pickup_times)
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+#     logging.basicConfig()
+#     _LOGGER.setLevel(logging.INFO)
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(main())
-    loop.run_forever()
+#     loop = asyncio.new_event_loop()
+#     loop.create_task(main())
+#     loop.run_forever()
